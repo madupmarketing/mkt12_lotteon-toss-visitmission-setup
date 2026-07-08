@@ -293,10 +293,16 @@ def get_lotteon_image_url(product_url):
     headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
     with urllib.request.urlopen(urllib.request.Request(product_url, headers=headers), timeout=15) as resp:
         html = resp.read().decode('utf-8', errors='replace')
-    m = re.search(r'(https://contents\.lotteon\.com/itemimage/[^"\']+bndl_img/[^"\']+_1\.png)', html)
+    # 1순위: og:image 메타태그 = 사이트가 선언한 공식 대표 이미지 (이미지 번호 _1/_2 무관, 속성 순서 무관)
+    m = re.search(r'<meta[^>]+og:image[^>]+content=["\'](https://contents\.lotteon\.com/itemimage/[^"\']+)["\']', html) \
+        or re.search(r'content=["\'](https://contents\.lotteon\.com/itemimage/[^"\']+)["\'][^>]+og:image', html)
     if m:
         return m.group(1).split('/dims/')[0]
-    m = re.search(r'(https://contents\.lotteon\.com/itemimage/[^"\']+_1\.(png|jpg))', html)
+    # 폴백: itemimage 링크 직접 매칭 (파일명 번호 _1 고정 안 함 — _2 등도 허용)
+    m = re.search(r'(https://contents\.lotteon\.com/itemimage/[^"\']+bndl_img/[^"\']+\.(png|jpg))', html)
+    if m:
+        return m.group(1).split('/dims/')[0]
+    m = re.search(r'(https://contents\.lotteon\.com/itemimage/[^"\']+\.(png|jpg))', html)
     if m:
         return m.group(1).split('/dims/')[0]
     return None
