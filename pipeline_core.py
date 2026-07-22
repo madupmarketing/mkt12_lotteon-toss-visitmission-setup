@@ -291,8 +291,12 @@ def load_source(token, stab):
 # ── 1) 이미지 링크 ────────────────────────────────────────────────
 def get_lotteon_image_url(product_url):
     headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-    with urllib.request.urlopen(urllib.request.Request(product_url, headers=headers), timeout=15) as resp:
-        html = resp.read().decode('utf-8', errors='replace')
+    try:
+        with urllib.request.urlopen(urllib.request.Request(product_url, headers=headers), timeout=15) as resp:
+            html = resp.read().decode('utf-8', errors='replace')
+    except urllib.error.HTTPError as e:
+        raise RuntimeError('상품페이지 요청 실패 {}: {}'.format(
+            e.code, e.read().decode('utf-8', 'replace')[:150]))
     # 1순위: og:image 메타태그 = 사이트가 선언한 공식 대표 이미지 (이미지 번호 _1/_2 무관, 속성 순서 무관)
     m = re.search(r'<meta[^>]+og:image[^>]+content=["\'](https://contents\.lotteon\.com/itemimage/[^"\']+)["\']', html) \
         or re.search(r'content=["\'](https://contents\.lotteon\.com/itemimage/[^"\']+)["\'][^>]+og:image', html)
@@ -309,8 +313,12 @@ def get_lotteon_image_url(product_url):
 
 def image_to_imgbb(img_url, name):
     from PIL import Image
-    with urllib.request.urlopen(urllib.request.Request(img_url, headers={'User-Agent':'Mozilla/5.0'}), timeout=15) as resp:
-        data = resp.read()
+    try:
+        with urllib.request.urlopen(urllib.request.Request(img_url, headers={'User-Agent':'Mozilla/5.0'}), timeout=15) as resp:
+            data = resp.read()
+    except urllib.error.HTTPError as e:
+        raise RuntimeError('상품이미지 다운로드 실패 {}: {}'.format(
+            e.code, e.read().decode('utf-8', 'replace')[:150]))
     img = Image.open(BytesIO(data)).resize((308, 308), Image.LANCZOS)
     ts = int(time.time()) % 256
     try:
@@ -322,9 +330,18 @@ def image_to_imgbb(img_url, name):
     buf = BytesIO(); img.save(buf, 'PNG')
     img_b64 = base64.b64encode(buf.getvalue()).decode('ascii')
     key = get_config()['imgbb']
+    if not key:
+        raise RuntimeError('imgbb_key 시크릿이 설정되지 않음')
     post = urllib.parse.urlencode({'key':key, 'image':img_b64, 'name':name}).encode()
-    with urllib.request.urlopen(urllib.request.Request('https://api.imgbb.com/1/upload', data=post), timeout=30) as resp:
-        return json.loads(resp.read().decode('utf-8', errors='replace'))['data']['url']
+    try:
+        with urllib.request.urlopen(urllib.request.Request('https://api.imgbb.com/1/upload', data=post), timeout=30) as resp:
+            res = json.loads(resp.read().decode('utf-8', errors='replace'))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError('imgbb 업로드 실패 {}: {}'.format(
+            e.code, e.read().decode('utf-8', 'replace')[:200]))
+    if not res.get('data', {}).get('url'):
+        raise RuntimeError('imgbb 응답에 url 없음: {}'.format(json.dumps(res)[:200]))
+    return res['data']['url']
 
 def process_image(token, tab, row_num, row):
     j = cell(row, 'J_url')
@@ -339,7 +356,7 @@ def process_image(token, tab, row_num, row):
         sheets_write_cell(token, TARGET_ID, "'{}'!AB{}".format(tab, row_num), hosted)
         return {'ok': True, 'msg': '이미지 업로드 완료', 'url': hosted}
     except Exception as e:
-        return {'ok': False, 'msg': '에러: {}'.format(str(e)[:120])}
+        return {'ok': False, 'msg': '에러: {}'.format(str(e)[:200])}
 
 
 # ── 2) 에어브릿지 링크 ────────────────────────────────────────────
