@@ -282,10 +282,10 @@ def to_int(s):
         return s if s else 0
 
 def load_target(token, tab):
-    return sheets_get(token, TARGET_ID, "'{}'!A1:AC400".format(tab))
+    return sheets_get(token, TARGET_ID, "'{}'!A1:AC2000".format(tab))
 
 def load_source(token, stab):
-    return sheets_get(token, SOURCE_ID, "'{}'!A1:N400".format(stab))
+    return sheets_get(token, SOURCE_ID, "'{}'!A1:N2000".format(stab))
 
 
 # ── 1) 이미지 링크 ────────────────────────────────────────────────

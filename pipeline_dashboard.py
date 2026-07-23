@@ -139,8 +139,8 @@ with st.container(border=True):
         "<div class='desc-line'><a href='{}' target='_blank'>시트</a> 내 처리할 행 범위를 지정해주세요</div>".format(SHEET_URL),
         unsafe_allow_html=True)
     c1, c2 = st.columns(2)
-    start_row = c1.number_input("시작 행", min_value=4, max_value=400, value=47, step=1)
-    end_row = c2.number_input("끝 행", min_value=4, max_value=400, value=47, step=1)
+    start_row = c1.number_input("시작 행", min_value=4, max_value=2000, value=47, step=1)
+    end_row = c2.number_input("끝 행", min_value=4, max_value=2000, value=47, step=1)
 
 # ── ② 작업 선택 (아이콘 토글 카드) ────────────────────────────────
 shead("ti-checklist", "실행 작업", "체크한 작업을 순서대로 실행합니다")
