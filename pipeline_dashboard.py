@@ -311,3 +311,6 @@ if run:
                     st.markdown("<span style='font-size:13px;color:#4E5968;'>• <a href='{}' target='_blank'>{}.xlsx</a></span>".format(link, camp), unsafe_allow_html=True)
                 else:
                     st.markdown("<span style='font-size:13px;color:#4E5968;'>• {}.xlsx</span>".format(camp), unsafe_allow_html=True)
+
+
+st.caption("build 2026-10-01 · sheet-error-detail")
