@@ -337,12 +337,25 @@ def image_to_imgbb(img_url, name):
     if not key:
         raise RuntimeError('imgbb_key 시크릿이 설정되지 않음')
     post = urllib.parse.urlencode({'key':key, 'image':img_b64, 'name':name}).encode()
-    try:
-        with urllib.request.urlopen(urllib.request.Request('https://api.imgbb.com/1/upload', data=post), timeout=30) as resp:
-            res = json.loads(resp.read().decode('utf-8', errors='replace'))
-    except urllib.error.HTTPError as e:
-        raise RuntimeError('imgbb 업로드 실패 {}: {}'.format(
-            e.code, e.read().decode('utf-8', 'replace')[:200]))
+    # imgbb가 간헐적으로 "Internal upload error"(code 111)/5xx를 내므로 재시도
+    res = None
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(urllib.request.Request('https://api.imgbb.com/1/upload', data=post), timeout=30) as resp:
+                res = json.loads(resp.read().decode('utf-8', errors='replace'))
+            break
+        except urllib.error.HTTPError as e:
+            body = e.read().decode('utf-8', 'replace')[:200]
+            transient = e.code >= 500 or e.code == 429 or '"code":111' in body
+            if transient and attempt < 3:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise RuntimeError('imgbb 업로드 실패 {} (시도 {}회): {}'.format(e.code, attempt + 1, body))
+        except (urllib.error.URLError, TimeoutError) as e:
+            if attempt < 3:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise RuntimeError('imgbb 연결 실패 (시도 {}회): {}'.format(attempt + 1, e))
     if not res.get('data', {}).get('url'):
         raise RuntimeError('imgbb 응답에 url 없음: {}'.format(json.dumps(res)[:200]))
     return res['data']['url']
