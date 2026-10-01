@@ -140,8 +140,12 @@ def sheets_write_cell(token, sid, rng, value):
     body = json.dumps({'values':[[value]]}).encode('utf-8')
     req = urllib.request.Request(url, data=body, method='PUT',
         headers={'Authorization':'Bearer '+token, 'Content-Type':'application/json; charset=utf-8'})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError('시트 쓰기 실패 {} ({}): {}'.format(
+            e.code, rng, e.read().decode('utf-8', 'replace')[:200]))
 
 
 # ── 구글 드라이브 업로드 (공유 드라이브) ──────────────────────────
